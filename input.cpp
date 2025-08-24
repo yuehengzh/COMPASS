@@ -122,6 +122,9 @@ void load_CSV(std::string base_name, std::string regionweights_file, bool use_CN
                     if (val==data.region_to_name[i]) region_index=i;
                 }
                 if (region_index==-1){
+                    if (use_CNA){
+                        throw std::runtime_error("One region was referenced in the variants file, but is missing in the regions file: "+val );
+                    }
                     data.region_to_name.push_back(val);
                     data.region_to_chromosome.push_back(data.locus_to_chromosome[data.locus_to_chromosome.size()-1]);
                     region_index = n_regions;
@@ -158,6 +161,21 @@ void load_CSV(std::string base_name, std::string regionweights_file, bool use_CN
     file_variants.close();
     n_cells = ref_counts[0].size();
     n_loci = ref_counts.size();
+    for (int i=0;i<n_loci;i++){
+        if (ref_counts[i].size()!=n_cells){
+            throw std::runtime_error("Not all loci had the same number of cells in the variants file: the first locus has "+
+                std::to_string(n_loci)+" cells, and locus "+std::to_string(i)+" has counts for "+
+                std::to_string(ref_counts[i].size()) +" cells.");
+        }
+    }
+    if (use_CNA){
+        for (int k=0;k<n_regions;k++){
+            if (region_counts[k].size()!=n_cells){
+                throw std::runtime_error("Region "+ std::to_string(k)+" has counts for "+std::to_string(region_counts[k].size())+" cells, "+
+                " but the variants file had counts for "+std::to_string(n_cells)+" cells.");
+            }
+        }
+    }
 
     if (data.locus_to_reference.size()==0){
         data.variant_is_SNV = std::vector<bool>(n_loci,true);
