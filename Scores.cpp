@@ -80,9 +80,10 @@ std::vector<double> Scores::compute_SNV_loglikelihoods(int c_ref,int c_alt,int l
     // compute the SNV log-likelihood for one locus for all of the cells
     // c_ref and c_alt are the copy numbers of each allele in the genotype
     
-    // If homozygous, the copy number of the only allele is irrelevant for the allelic proportion
-    if (c_ref==0) c_alt=1;
-    else if (c_alt==0) c_ref==1;
+    // If homozygous (or fully deleted), normalize so the allelic proportion is well-defined
+    if (c_ref==0 && c_alt==0) { c_ref=1; } // CN=0: no alleles — treat like hom-ref (f≈eps)
+    else if (c_ref==0) c_alt=1;
+    else if (c_alt==0) c_ref=1;
 
     long int hash = c_ref+ 20*c_alt + 400*locus ;
     
@@ -193,7 +194,7 @@ std::vector<double> Scores::compute_CNA_loglikelihoods(int region, double region
     std::vector<double> cnv_loglikelihoods{};
     cnv_loglikelihoods.resize(n_cells);
     for (int j=0;j<n_cells;j++){
-        double expected_read_count_region = cells[j].total_counts * region_proportion;
+        double expected_read_count_region = cells[j].total_counts * region_proportion + 1e-6;
         cnv_loglikelihoods[j] = std::lgamma(cells[j].region_counts[region] + theta-1) + theta * std::log(theta / (theta + expected_read_count_region))
                                 + cells[j].region_counts[region] * std::log(expected_read_count_region / (expected_read_count_region+theta));
     }
@@ -205,8 +206,9 @@ std::vector<double> Scores::compute_CNA_loglikelihoods(int region, double region
 
 
 std::vector<double> Scores::get_dropoutref_counts_genotype(int c_ref,int c_alt, int locus,double dropout_rate_ref,double dropout_rate_alt){
-    if (c_ref==0) c_alt=1;
-    else if (c_alt==0) c_ref==1;
+    if (c_ref==0 && c_alt==0) { c_ref=1; }
+    else if (c_ref==0) c_alt=1;
+    else if (c_alt==0) c_ref=1;
     if (c_ref==0 || c_alt==0){
         dropout_rate_ref=0.1;
         dropout_rate_alt=0.1;
@@ -227,8 +229,9 @@ std::vector<double> Scores::get_dropoutref_counts_genotype(int c_ref,int c_alt, 
 }
 
 std::vector<double> Scores::get_dropoutalt_counts_genotype(int c_ref,int c_alt, int locus,double dropout_rate_ref,double dropout_rate_alt){
-    if (c_ref==0) c_alt=1;
-    else if (c_alt==0) c_ref==1;
+    if (c_ref==0 && c_alt==0) { c_ref=1; }
+    else if (c_ref==0) c_alt=1;
+    else if (c_alt==0) c_ref=1;
     if (c_ref==0 || c_alt==0){
         dropout_rate_ref=0.1;
         dropout_rate_alt=0.1;

@@ -502,10 +502,14 @@ void Tree::EM_step(bool use_doublets_local, bool allow_diff_dropoutrates){
 }
 
 bool Tree::rec_check_max_one_event_per_region_per_lineage(int node, std::vector<int> n_events_in_regions){
-    // check that each region is affected, in one lineage, by at most one CNA.
+    // check that each region is affected, in one lineage, by at most two CNAs.
+    // Two events are allowed to support CN=0: a region can go from CN=2 to CN=1 (first loss)
+    // and then from CN=1 to CN=0 (second loss) in ancestor-descendant nodes.
+    // All other two-event combinations (gain+gain, etc.) are blocked by the validity check in
+    // update_genotype or are net-neutral and will be rejected by the MCMC likelihood.
         for (auto CNA: nodes[node]->get_CNA_events()){
             n_events_in_regions[std::get<0>(CNA)]+=1;
-            if (n_events_in_regions[std::get<0>(CNA)]>1) return false;
+            if (n_events_in_regions[std::get<0>(CNA)]>2) return false;
         }
         bool valid=true;
         for (int child: children[node]){
