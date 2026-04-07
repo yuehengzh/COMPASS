@@ -11,20 +11,19 @@ in Tree.cpp). This prevented CN=0, which requires two consecutive losses on the 
 
 - **Line 512** (`rec_check_max_one_event_per_region_per_lineage`, function begins at line 504): Changed the per-lineage
   event limit from 1 to 2. This specifically enables the CN 2→1→0 double-loss scenario.
-  All other two-event combinations (gain+gain, loss+gain, etc.) are harmless: additional gains
-  beyond CN=3 are already rejected by `update_genotype`'s validity check, and net-neutral
-  combinations have no likelihood benefit and will be rejected by the MCMC.
+  This also enables CN=4 (two gains, CN 2→3→4; see below). All other two-event combinations
+  (gain+loss, etc.) are net-neutral and rejected by the MCMC.
 
 ---
 
 
-## Allow copy number 0 (homozygous deletion) events
+## Allow copy numbers 0 and 4 (homozygous deletion and high-level amplification)
 
-COMPASS previously constrained copy numbers to {1, 2, 3}. The following changes allow regions to reach copy number 0.
+COMPASS previously constrained copy numbers to {1, 2, 3}. The following changes allow regions to reach copy number 0 or 4.
 
 ### Node.cpp
 
-- **Line 171**: Relaxed the CNA validity constraint from `cn_regions[region]+gain_loss >= 1` to `>= 0`. This is the single gate that blocked homozygous deletions. Allele-level checks below it still prevent losing an allele that doesn't exist, and naturally block further CNAs on an already-deleted region (since both n_ref and n_alt are 0).
+- **Line 171**: Relaxed the CNA validity constraint: lower bound from `>= 1` to `>= 0` (enables CN=0), upper bound from `<= 3` to `<= 4` (enables CN=4). Allele-level checks below it still prevent losing an allele that doesn't exist. CN=0 naturally blocks further CNAs on a deleted region (both alleles are 0). CN=4 is a terminal high-amplification state; further gains are blocked by the validity check.
 
 ### Scores.cpp
 
@@ -43,4 +42,8 @@ Added `test/run_tests.py`, a self-contained test script that generates hand-craf
 - **Test 1 — smoke**: COMPASS exits zero, all expected output files are present, and none contain NaN or inf.
 - **Test 2 — CN=0 recovery**: the best tree contains a node with two `Loss Region0` events (CN 2→1→0), the copynumbers TSV confirms CN=0, and ≥70% of the deleted cells are assigned to that node.
 
-Design notes: 110 cells (60 normal, 50 deleted) to satisfy COMPASS's hard thresholds for phase-2 CNA inference; `--filterregions 0` keeps the zero-read region; `--cnacost 20 --lohcost 20` lowers the CNA discovery barrier for this small dataset.
+Design notes (CN=0): 110 cells (60 normal, 50 deleted); `--filterregions 0` keeps the zero-read region; `--cnacost 20 --lohcost 20` lowers the CNA discovery barrier.
+
+- **Test 3 — CN=4 recovery**: the best tree contains a node with two `Gain Region0` events (CN 2→3→4), the copynumbers TSV confirms CN=4, and ≥70% of the amplified cells are assigned to that node.
+
+Design notes (CN=4): 360 cells (60 normal, 300 amplified). Both gains are on *different alleles* — (Region0, +1, allele=0) and (Region0, +1, allele=1) — so they produce distinct CNA event tuples and coexist in a single node. SNV0 is a het mutation in amplified cells (50:50 reads); at CN=4 with one alt allele per allele pair the expected alt frequency is exactly 0.5, which matches the data and rules out the CNLOH-at-root alternative. Four chains × 5000 steps with `--cnacost 20 --lohcost 20`.
