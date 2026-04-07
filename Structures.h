@@ -57,7 +57,6 @@ struct Params{
     double node_cost;
     double CNA_cost;
     double LOH_cost;
-    double mut_notAtRoot_cost;
     double mut_notAtRoot_freq_cost;
 };
 

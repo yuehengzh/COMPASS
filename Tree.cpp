@@ -528,9 +528,8 @@ void Tree::compute_prior_score(){
         if (nodes[i]->get_number_mutations()==0 && nodes[i]->get_number_effective_LOH(nodes[parents[i]])==0) log_prior_score-=2*(8+n_loci)*parameters.node_cost;
     }
 
-    // Penalize mutations which are not at the root
-    log_prior_score+=nodes[0]->get_number_mutations() * parameters.mut_notAtRoot_cost;
-    // Particularly penalize mutations with a high pop frequency which are not at the root
+    // Penalize mutations with a high pop frequency which are not at the root
+    // (generic root-placement bonus removed; only the population-frequency term is kept)
     for (int k=1;k<n_nodes;k++){
         for (int mut : nodes[k]->get_mutations()){
             if (data.locus_to_freq[mut]>0.0001) log_prior_score-= data.locus_to_freq[mut] *parameters.mut_notAtRoot_freq_cost;

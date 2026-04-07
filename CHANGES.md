@@ -1,5 +1,29 @@
 # Changes
 
+## Remove root-mutation bonus from prior score
+
+`Tree::compute_prior_score()` previously added `+10` for every mutation placed at
+the root node (`nodes[0]->get_number_mutations() * parameters.mut_notAtRoot_cost`).
+This weakly encouraged placing mutations at the root regardless of the data. For
+somatic data (all FREQ=0.0) the bonus is undesirable and interacts awkwardly with
+CNLOH-at-root (a root CNLOH can silence a root mutation while still collecting the
+bonus at no SNV-likelihood cost). The separate population-frequency penalty
+(`mut_notAtRoot_freq_cost`, which only fires when FREQ > 0.0001) is unaffected.
+
+### Tree.cpp
+
+- **Lines 531–532**: Removed the `+= mut_notAtRoot_cost` line and updated the comment.
+
+### Structures.h
+
+- **Line 60**: Removed the `mut_notAtRoot_cost` field from `Params`.
+
+### input.cpp
+
+- **Line 338**: Removed `parameters.mut_notAtRoot_cost=10` initialisation.
+
+---
+
 ## Allow two loss events per region per lineage (required for CN=0)
 
 COMPASS has a hard prior penalty (−1,000,000) for trees where any region is affected by more
